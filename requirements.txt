@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+jinja2
+langchain_groq
+langchain_core
+langchain_community
+mangum

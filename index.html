@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebBot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background: #ffffff;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+        
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+        }
+        
+        .navbar img {
+            max-width: 50px;
+            height: auto;
+        }
+        
+        .navbar h1 {
+            margin-left: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .footer a {
+            color: #0000ff;
+        }
+
+        #mic-button {
+            margin-left: 10px;
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+
+        #mic-button:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        #mic-button.listening {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        #mic-button.listening:hover {
+            background-color: #c82333;
+            border-color: #c82333;
+        }
+
+        @media (max-width: 576px) {
+            .navbar img {
+                max-width: 30px;
+            }
+
+            .navbar h1 {
+                margin-left: 5px;
+                font-size: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <img src="{{ url_for('static', path='logo.png') }}" alt="Logo">         
+            <h1>SearchBaatGPT</h1>
+        </div>
+        
+        <form id="chat-form">
+            <div class="mb-3">
+                <label for="user-input" class="form-label">User Input:</label>
+                <input type="text" class="form-control" id="user-input" name="user_input">
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">Send</button>
+                <button type="button" id="mic-button" class="btn">
+                    <i class="fas fa-microphone"></i>
+                </button>
+            </div>
+        </form>
+        <div id="chat-messages" class="mt-4"></div>
+        
+        <div class="footer">
+            Developed at <b>HPC Lab SEECS</b><br>
+            This is the alpha version of this software. For any issue report  
+            <a href="https://forms.gle/y3SprybozLBvT6H27" target="_blank">here</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/annyang/2.6.1/annyang.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#chat-form').submit(function(e) {
+                e.preventDefault();
+                var userInput = $('#user-input').val();
+                sendMessage(userInput);
+            });
+
+            if (annyang) {
+                var commands = {
+                    '*text': function(text) {
+                        $('#user-input').val(text);
+                    }
+                };
+
+                annyang.addCommands(commands);
+
+                $('#mic-button').on('click', function() {
+                    if (annyang.isListening()) {
+                        annyang.abort();
+                        $(this).removeClass('listening');
+                    } else {
+                        annyang.start();
+                        $(this).addClass('listening');
+                    }
+                });
+
+                annyang.addCallback('result', function() {
+                    $('#mic-button').removeClass('listening');
+                    annyang.abort();  // Stop listening after capturing the result
+                });
+            }
+        });
+
+        function sendMessage(userInput) {
+            $.ajax({
+                url: '/chat',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ user_input: userInput }),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        var content = response.content;
+                        appendMessage('BOT', content);
+                    } else {
+                        var message = response.message;
+                        appendMessage('Error', message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    var message = 'An error occurred: ' + error;
+                    appendMessage('Error', message);
+                }
+            });
+        }
+
+        function appendMessage(sender, message) {
+            var messageElement = $('<div>').addClass('mb-3');
+            $('<strong>').text(sender + ': ').appendTo(messageElement);
+            $('<span>').text(message).appendTo(messageElement);
+            $('#chat-messages').html(messageElement); // Replace existing content with new response
+        }
+    </script>
+</body>
+</html>
